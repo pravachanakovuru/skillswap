@@ -1,39 +1,26 @@
 
 const mysql = require("mysql2/promise");
+
 const fs = require("fs");
 const path = require("path");
-require("dotenv").config();
 
-const dbConfig = {
+const config = {
     host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT || 4000),
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-
-    ssl: {
-        ca: fs.readFileSync(
-            path.resolve(__dirname, "..", process.env.DB_CA_PATH || "ca.pem")
-        )
-    },
-
+    port: Number(process.env.DB_PORT || 4000),
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
 };
 
-const db = mysql.createPool(dbConfig);
-
-async function testConnection() {
-    try {
-        const connection = await db.getConnection();
-        console.log("TiDB database connected successfully!");
-        connection.release();
-    } catch (error) {
-        console.error("TiDB connection failed:", error.message);
-    }
+if (process.env.DB_CA_CERT) {
+    config.ssl = {
+        ca: process.env.DB_CA_CERT.replace(/\\n/g, "\n"),
+        rejectUnauthorized: true
+    };
 }
 
-testConnection();
+const db = mysql.createPool(config);
 
 module.exports = db;
