@@ -1,7 +1,8 @@
- import React, { useEffect, useState } from "react";
+
+import React, { useEffect, useState } from "react";
 import "./App.css";
 
-const API = "http://localhost:5000";
+const API = "https://skillswap-51yh.onrender.com";
 
 function App() {
   const [page, setPage] = useState("home");
@@ -34,12 +35,12 @@ function App() {
     skill_level: "BEGINNER"
   });
 
-  // MY SKILLS STATE
+  // MY SKILLS
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  // EXPLORE SKILLS STATE
+  // EXPLORE SKILLS
   const [exploreSkills, setExploreSkills] = useState([]);
   const [exploreLoading, setExploreLoading] = useState(false);
   const [exploreSearch, setExploreSearch] = useState("");
@@ -78,7 +79,8 @@ function App() {
       alert("Welcome to SkillSwap!");
 
     } catch (error) {
-      alert("Cannot connect to backend. Please start your server.");
+      console.error(error);
+      alert("Cannot connect to backend.");
     }
   };
 
@@ -123,6 +125,7 @@ function App() {
       setPage("login");
 
     } catch (error) {
+      console.error(error);
       alert("Cannot connect to backend.");
     }
   };
@@ -135,6 +138,7 @@ function App() {
 
     try {
       setLoading(true);
+      setMessage("");
 
       const response = await fetch(`${API}/api/skills`, {
         headers: {
@@ -148,7 +152,7 @@ function App() {
         throw new Error(data.message || "Unable to load skills");
       }
 
-      setSkills(data);
+      setSkills(Array.isArray(data) ? data : []);
 
     } catch (error) {
       setMessage(error.message);
@@ -158,97 +162,54 @@ function App() {
     }
   };
 
-  // GET EXPLORE SKILLS
- // GET ALL PUBLIC TEACHING SKILLS
-const fetchExploreSkills = async () => {
-  try {
-    setExploreLoading(true);
+  // GET PUBLIC TEACHING SKILLS
+  const fetchExploreSkills = async () => {
+    try {
+      setExploreLoading(true);
 
-const response = await fetch(
-  `${API}/api/skills/public`,
-  {
-    cache: "no-store"
-  }
-);
+      const response = await fetch(`${API}/api/skills/public`, {
+        cache: "no-store"
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(
-        data.message || "Unable to load public skills"
-      );
-    }
-
-    setExploreSkills(data);
-
-  } catch (error) {
-    console.error("Explore error:", error.message);
-  } finally {
-    setExploreLoading(false);
-  }
-};
-
-  // LOAD SKILLS WHEN PAGE CHANGES
-useEffect(() => {
-  if (page === "dashboard" && user) {
-    fetchSkills();
-  }
-
-  if (page === "explore" && user) {
-    fetchExploreSkills();
-  }
-}, [page, user]);
-
-  // SEND REQUEST TO TEACHER
- // SEND REQUEST TO TEACHER
-const handleSendRequest = async (skill) => {
-
-  if (!user) {
-    alert("Please login to send a learning request!");
-    setPage("login");
-    return;
-  }
-
-  try {
-    const response = await fetch(
-      `${API}/api/skills/request`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization:
-            "Bearer " + localStorage.getItem("token")
-        },
-        body: JSON.stringify({
-          skill_id: skill.skillId || skill.id,
-          description:
-            "I am interested in learning this skill.",
-          learning_level: "BEGINNER",
-          preferred_mode: "EITHER"
-        })
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Unable to load public skills"
+        );
       }
-    );
 
-    const data = await response.json();
+      setExploreSkills(Array.isArray(data) ? data : []);
 
-    if (!response.ok) {
-      alert(data.message || "Request failed");
-      return;
+    } catch (error) {
+      console.error("Explore error:", error.message);
+    } finally {
+      setExploreLoading(false);
+    }
+  };
+
+  // LOAD DATA WHEN PAGE CHANGES
+  useEffect(() => {
+    if (page === "dashboard" && user) {
+      fetchSkills();
     }
 
-    alert("Request sent to the teacher successfully! 🎉");
-
-  } catch (error) {
-    console.error("Send request error:", error);
-    alert("Unable to send request. Check your server.");
-  }
-};
+    if (page === "explore") {
+      fetchExploreSkills();
+    }
+  }, [page, user]);
 
   // ADD SKILL
   const handleAddSkill = async (e) => {
     e.preventDefault();
 
     const token = localStorage.getItem("token");
+
+    if (!token) {
+      alert("Please login first!");
+      setPage("login");
+      return;
+    }
 
     try {
       const response = await fetch(`${API}/api/skills`, {
@@ -276,15 +237,14 @@ const handleSendRequest = async (skill) => {
         teaching_mode: "FREE",
         skill_level: "BEGINNER"
       });
-setMessage("");
 
-fetchSkills();
+      setMessage("");
 
-// Refresh public skills also
-await fetchExploreSkills();
-      
+      await fetchSkills();
+      await fetchExploreSkills();
 
     } catch (error) {
+      console.error(error);
       alert("Cannot connect to backend.");
     }
   };
@@ -316,9 +276,12 @@ await fetchExploreSkills();
         previous.filter((skill) => skill.userSkillId !== id)
       );
 
+      await fetchExploreSkills();
+
       alert("Skill deleted successfully!");
 
     } catch (error) {
+      console.error(error);
       alert("Cannot connect to backend.");
     }
   };
@@ -334,23 +297,129 @@ await fetchExploreSkills();
     setPage("home");
   };
 
+  // HOME CATEGORY DATA
+  const categories = [
+    {
+      icon: "💻",
+      name: "Web Development",
+      description: "Build websites and learn modern technologies.",
+      category: "Technology",
+      subskills: [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "React.js",
+        "Node.js",
+        "Express.js",
+        "MySQL",
+        "Bootstrap",
+        "Frontend Development",
+        "Backend Development"
+      ]
+    },
+    {
+      icon: "🎨",
+      name: "Graphic Design",
+      description: "Turn your creative ideas into beautiful designs.",
+      category: "Creative",
+      subskills: [
+        "Canva",
+        "Adobe Photoshop",
+        "Illustrator",
+        "Figma",
+        "Logo Design",
+        "UI Design",
+        "Poster Design",
+        "Typography",
+        "Branding"
+      ]
+    },
+    {
+      icon: "📸",
+      name: "Photography",
+      description: "Capture moments and improve your visual storytelling.",
+      category: "Creative",
+      subskills: [
+        "Portrait Photography",
+        "Nature Photography",
+        "Product Photography",
+        "Mobile Photography",
+        "Photo Editing",
+        "Lightroom",
+        "Camera Basics",
+        "Lighting Techniques"
+      ]
+    },
+    {
+      icon: "🎵",
+      name: "Music",
+      description: "Explore instruments, rhythm and musical creativity.",
+      category: "Arts",
+      subskills: [
+        "Guitar",
+        "Piano",
+        "Keyboard",
+        "Singing",
+        "Music Theory",
+        "Drums",
+        "Violin",
+        "Music Production"
+      ]
+    },
+    {
+      icon: "🐍",
+      name: "Python Programming",
+      description: "Start coding and solve problems with Python.",
+      category: "Technology",
+      subskills: [
+        "Python Basics",
+        "OOP",
+        "Data Structures",
+        "File Handling",
+        "Django",
+        "Flask",
+        "Data Science",
+        "Machine Learning",
+        "Automation"
+      ]
+    },
+    {
+      icon: "🗣️",
+      name: "Communication",
+      description: "Build confidence and improve communication.",
+      category: "Personal",
+      subskills: [
+        "English Speaking",
+        "Public Speaking",
+        "Interview Skills",
+        "Presentation Skills",
+        "Group Discussion",
+        "Storytelling",
+        "Business Communication",
+        "Leadership"
+      ]
+    }
+  ];
+
   return (
     <div className="app">
 
       {/* NAVBAR */}
       <nav className="navbar">
+
         <h2 className="logo" onClick={() => setPage("home")}>
           Skill<span>Swap.</span>
         </h2>
 
         <div className="nav-links">
+
           <button onClick={() => setPage("home")}>
             Home
           </button>
 
           <button onClick={() => setPage("explore")}>
-         Explore
-</button>
+            Explore
+          </button>
 
           <button
             onClick={() => {
@@ -365,9 +434,11 @@ await fetchExploreSkills();
           >
             About
           </button>
+
         </div>
 
         <div className="nav-buttons">
+
           {user ? (
             <>
               <button
@@ -381,8 +452,7 @@ await fetchExploreSkills();
                 className="btn-primary"
                 onClick={handleLogout}
               >
-               
-               Logout
+                Logout
               </button>
             </>
           ) : (
@@ -402,14 +472,19 @@ await fetchExploreSkills();
               </button>
             </>
           )}
+
         </div>
       </nav>
 
       {/* HOME PAGE */}
       {page === "home" && (
         <>
+
+          {/* HERO SECTION */}
           <section className="hero">
+
             <div className="hero-content">
+
               <span className="eyebrow">
                 ✦ LEARN • SHARE • GROW
               </span>
@@ -426,166 +501,84 @@ await fetchExploreSkills();
               </p>
 
               <div className="hero-buttons">
+
                 <button
                   className="btn-primary hero-btn"
                   onClick={() =>
                     setPage(user ? "dashboard" : "register")
                   }
-                ><button
-  className="btn-outline hero-btn"
-  onClick={() => setPage("explore")}
->
-  Explore Skills
-</button>
+                >
                   Start Your Journey →
                 </button>
 
-               
+                <button
+                  className="btn-outline hero-btn"
+                  onClick={() => setPage("explore")}
+                >
+                  Explore Skills
+                </button>
+
               </div>
 
               <div className="hero-note">
                 <span>💜</span>
                 A community where everyone has something to teach.
               </div>
+
             </div>
 
             <div className="hero-art">
+
               <div className="art-circle">
+
                 <div className="art-emoji">🌱</div>
+
                 <div className="floating-card float-one">
                   💻 Coding
                 </div>
+
                 <div className="floating-card float-two">
                   🎨 Creativity
                 </div>
+
                 <div className="floating-card float-three">
                   📚 Learning
                 </div>
+
               </div>
+
             </div>
+
           </section>
 
-          {/* EXPLORE CATEGORIES WITH SUB-SKILLS */}
+          {/* EXPLORE CATEGORIES */}
           <section className="features section" id="explore">
+
             <div className="section-heading">
-              <span className="eyebrow">FIND YOUR NEXT SKILL</span>
+
+              <span className="eyebrow">
+                FIND YOUR NEXT SKILL
+              </span>
+
               <h2>
                 Explore <span>Possibilities</span>
               </h2>
-              <p>There is always something new to learn.</p>
+
+              <p>
+                There is always something new to learn.
+              </p>
+
             </div>
 
             <div className="skill-container">
-              {[
-                {
-                  icon: "💻",
-                  name: "Web Development",
-                  description:
-                    "Build websites and learn modern technologies.",
-                  category: "Technology",
-                  subskills: [
-                    "HTML",
-                    "CSS",
-                    "JavaScript",
-                    "React.js",
-                    "Node.js",
-                    "Express.js",
-                    "MySQL",
-                    "Bootstrap",
-                    "Frontend Development",
-                    "Backend Development"
-                  ]
-                },
-                {
-                  icon: "🎨",
-                  name: "Graphic Design",
-                  description:
-                    "Turn your creative ideas into beautiful designs.",
-                  category: "Creative",
-                  subskills: [
-                    "Canva",
-                    "Adobe Photoshop",
-                    "Illustrator",
-                    "Figma",
-                    "Logo Design",
-                    "UI Design",
-                    "Poster Design",
-                    "Typography",
-                    "Branding"
-                  ]
-                },
-                {
-                  icon: "📸",
-                  name: "Photography",
-                  description:
-                    "Capture moments and improve your visual storytelling.",
-                  category: "Creative",
-                  subskills: [
-                    "Portrait Photography",
-                    "Nature Photography",
-                    "Product Photography",
-                    "Mobile Photography",
-                    "Photo Editing",
-                    "Lightroom",
-                    "Camera Basics",
-                    "Lighting Techniques"
-                  ]
-                },
-                {
-                  icon: "🎵",
-                  name: "Music",
-                  description:
-                    "Explore instruments, rhythm and musical creativity.",
-                  category: "Arts",
-                  subskills: [
-                    "Guitar",
-                    "Piano",
-                    "Keyboard",
-                    "Singing",
-                    "Music Theory",
-                    "Drums",
-                    "Violin",
-                    "Music Production"
-                  ]
-                },
-                {
-                  icon: "🐍",
-                  name: "Python Programming",
-                  description:
-                    "Start coding and solve problems with Python.",
-                  category: "Technology",
-                  subskills: [
-                    "Python Basics",
-                    "OOP",
-                    "Data Structures",
-                    "File Handling",
-                    "Django",
-                    "Flask",
-                    "Data Science",
-                    "Machine Learning",
-                    "Automation"
-                  ]
-                },
-                {
-                  icon: "🗣️",
-                  name: "Communication",
-                  description:
-                    "Build confidence and improve communication.",
-                  category: "Personal",
-                  subskills: [
-                    "English Speaking",
-                    "Public Speaking",
-                    "Interview Skills",
-                    "Presentation Skills",
-                    "Group Discussion",
-                    "Storytelling",
-                    "Business Communication",
-                    "Leadership"
-                  ]
-                }
-              ].map((item, index) => (
+
+              {categories.map((item, index) => (
+
                 <div className="explore-card" key={index}>
-                  <div className="explore-icon">{item.icon}</div>
+
+                  <div className="explore-icon">
+                    {item.icon}
+                  </div>
 
                   <span className="card-category">
                     {item.category}
@@ -596,37 +589,51 @@ await fetchExploreSkills();
                   <p>{item.description}</p>
 
                   <div className="subskill-list">
+
                     {item.subskills.map((subskill, subIndex) => (
+
                       <span
                         className="subskill-tag"
                         key={subIndex}
                       >
                         {subskill}
                       </span>
+
                     ))}
+
                   </div>
 
                   <button
-                    onClick={() =>
-                      setPage(user ? "explore" : "login")
-                    }
+                    onClick={() => setPage("explore")}
                   >
                     Explore Skill →
                   </button>
+
                 </div>
+
               ))}
+
             </div>
+
           </section>
 
+          {/* HOW IT WORKS */}
           <section className="how-section section">
+
             <div className="section-heading">
-              <span className="eyebrow">SIMPLE & FRIENDLY</span>
+
+              <span className="eyebrow">
+                SIMPLE & FRIENDLY
+              </span>
+
               <h2>
                 How SkillSwap <span>Works</span>
               </h2>
+
             </div>
 
             <div className="steps">
+
               <div className="step-card">
                 <div>01</div>
                 <h3>Create an Account</h3>
@@ -644,28 +651,50 @@ await fetchExploreSkills();
                 <h3>Grow Together</h3>
                 <p>Connect with others and exchange knowledge.</p>
               </div>
+
             </div>
+
           </section>
 
+          {/* FOOTER */}
           <footer id="about">
-            <h2>Skill<span>Swap.</span></h2>
-            <p>Learn Together. Share Together. Grow Together. 💜</p>
+
+            <h2>
+              Skill<span>Swap.</span>
+            </h2>
+
+            <p>
+              Learn Together. Share Together. Grow Together. 💜
+            </p>
+
             <p className="footer-small">
               © 2026 SkillSwap. All rights reserved.
             </p>
+
           </footer>
+
         </>
       )}
 
       {/* EXPLORE PAGE */}
       {page === "explore" && (
+
         <section className="dashboard-page">
+
           <div className="section-heading">
-            <span className="eyebrow">DISCOVER NEW TALENTS</span>
+
+            <span className="eyebrow">
+              DISCOVER NEW TALENTS
+            </span>
+
             <h2>
               Explore <span>Skills ✨</span>
             </h2>
-            <p>Learn new skills from other SkillSwap members.</p>
+
+            <p>
+              Learn new skills from other SkillSwap members.
+            </p>
+
           </div>
 
           <input
@@ -676,33 +705,53 @@ await fetchExploreSkills();
           />
 
           {exploreLoading ? (
-            <p className="empty-state">Loading skills...</p>
+
+            <p className="empty-state">
+              Loading skills...
+            </p>
+
           ) : (
+
             <>
-              {exploreSkills.filter(skill =>
-                skill.skill_name.toLowerCase().includes(
-                  exploreSearch.toLowerCase()
-                )
+
+              {exploreSkills.filter((skill) =>
+                (skill.skill_name || "")
+                  .toLowerCase()
+                  .includes(exploreSearch.toLowerCase())
               ).length === 0 ? (
+
                 <div className="empty-state">
+
                   <div>🌱</div>
+
                   <h3>No skills found</h3>
-                  <p>Ask another member to add a Teach skill!</p>
+
+                  <p>
+                    Ask another member to add a Teach skill!
+                  </p>
+
                 </div>
+
               ) : (
+
                 <div className="skill-container">
+
                   {exploreSkills
-                    .filter(skill =>
-                      skill.skill_name.toLowerCase().includes(
-                        exploreSearch.toLowerCase()
-                      )
+                    .filter((skill) =>
+                      (skill.skill_name || "")
+                        .toLowerCase()
+                        .includes(exploreSearch.toLowerCase())
                     )
-                    .map(skill => (
+                    .map((skill) => (
+
                       <div
                         className="explore-card"
                         key={skill.id || skill.userSkillId}
                       >
-                        <div className="explore-icon">🎓</div>
+
+                        <div className="explore-icon">
+                          🎓
+                        </div>
 
                         <span className="card-category">
                           TEACHING SKILL
@@ -715,37 +764,54 @@ await fetchExploreSkills();
                             "Ready to share this skill!"}
                         </p>
 
-                        <p>👤 Teacher: {skill.teacher_name}</p>
-                        <p>Level: {skill.skill_level}</p>
-                        <p>Mode: {skill.teaching_mode}</p>
+                        <p>
+                          👤 Teacher: {skill.teacher_name || "SkillSwap Member"}
+                        </p>
 
-                        <button
-                          className="btn-primary"
-                          onClick={() => handleSendRequest(skill)}
-                        >
-                          Send Request ✉️
-                        </button>
+                        <p>
+                          Level: {skill.skill_level}
+                        </p>
+
+                        <p>
+                          Mode: {skill.teaching_mode}
+                        </p>
+
                       </div>
+
                     ))}
+
                 </div>
+
               )}
+
             </>
+
           )}
-<button
-  className="back-home"
-  onClick={() => setPage(user ? "dashboard" : "home")}
->
-  ← Back
-</button>
-         
+
+          <button
+            className="back-home"
+            onClick={() => setPage(user ? "dashboard" : "home")}
+          >
+            ← Back
+          </button>
+
         </section>
+
       )}
-            {/* LOGIN PAGE */}
+
+      {/* LOGIN PAGE */}
       {page === "login" && (
+
         <section className="auth-section">
+
           <div className="auth-card">
+
             <div className="auth-icon">👋</div>
-            <span className="eyebrow">WELCOME BACK</span>
+
+            <span className="eyebrow">
+              WELCOME BACK
+            </span>
+
             <h1>Login to SkillSwap</h1>
 
             <p className="auth-subtitle">
@@ -753,25 +819,34 @@ await fetchExploreSkills();
             </p>
 
             <form onSubmit={handleLogin}>
+
               <label>Email Address</label>
+
               <input
                 type="email"
                 placeholder="Enter your email"
                 required
                 value={login.email}
                 onChange={(e) =>
-                  setLogin({ ...login, email: e.target.value })
+                  setLogin({
+                    ...login,
+                    email: e.target.value
+                  })
                 }
               />
 
               <label>Password</label>
+
               <input
                 type="password"
                 placeholder="Enter your password"
                 required
                 value={login.password}
                 onChange={(e) =>
-                  setLogin({ ...login, password: e.target.value })
+                  setLogin({
+                    ...login,
+                    password: e.target.value
+                  })
                 }
               />
 
@@ -781,6 +856,7 @@ await fetchExploreSkills();
               >
                 Login →
               </button>
+
             </form>
 
             <p className="auth-switch">
@@ -796,16 +872,26 @@ await fetchExploreSkills();
             >
               ← Back to Home
             </button>
+
           </div>
+
         </section>
+
       )}
 
-      {/* REGISTRATION PAGE */}
+      {/* REGISTER PAGE */}
       {page === "register" && (
+
         <section className="auth-section">
+
           <div className="auth-card register-card">
+
             <div className="auth-icon">✨</div>
-            <span className="eyebrow">JOIN OUR COMMUNITY</span>
+
+            <span className="eyebrow">
+              JOIN OUR COMMUNITY
+            </span>
+
             <h1>Create Account</h1>
 
             <p className="auth-subtitle">
@@ -813,29 +899,39 @@ await fetchExploreSkills();
             </p>
 
             <form onSubmit={handleRegister}>
+
               <label>Full Name</label>
+
               <input
                 type="text"
                 placeholder="Enter your full name"
                 required
                 value={register.name}
                 onChange={(e) =>
-                  setRegister({ ...register, name: e.target.value })
+                  setRegister({
+                    ...register,
+                    name: e.target.value
+                  })
                 }
               />
 
               <label>Email Address</label>
+
               <input
                 type="email"
                 placeholder="Enter your email"
                 required
                 value={register.email}
                 onChange={(e) =>
-                  setRegister({ ...register, email: e.target.value })
+                  setRegister({
+                    ...register,
+                    email: e.target.value
+                  })
                 }
               />
 
               <label>Password</label>
+
               <input
                 type="password"
                 placeholder="At least 8 characters"
@@ -843,11 +939,15 @@ await fetchExploreSkills();
                 required
                 value={register.password}
                 onChange={(e) =>
-                  setRegister({ ...register, password: e.target.value })
+                  setRegister({
+                    ...register,
+                    password: e.target.value
+                  })
                 }
               />
 
               <label>Confirm Password</label>
+
               <input
                 type="password"
                 placeholder="Re-enter your password"
@@ -868,11 +968,14 @@ await fetchExploreSkills();
               >
                 Create Account →
               </button>
+
             </form>
 
             <p className="auth-switch">
               Already have an account?{" "}
-              <span onClick={() => setPage("login")}>Login</span>
+              <span onClick={() => setPage("login")}>
+                Login
+              </span>
             </p>
 
             <button
@@ -881,50 +984,88 @@ await fetchExploreSkills();
             >
               ← Back to Home
             </button>
+
           </div>
+
         </section>
+
       )}
 
       {/* DASHBOARD */}
-      {page === "dashboard" && (
+      {page === "dashboard" && user && (
+
         <section className="dashboard-page">
+
           <div className="dashboard-header">
+
             <div>
-              <span className="eyebrow">YOUR PERSONAL SPACE</span>
+
+              <span className="eyebrow">
+                YOUR PERSONAL SPACE
+              </span>
+
               <h1>
                 Hello, <span>{user?.name || "Learner"}</span> 👋
               </h1>
-              <p>Manage your skills and keep growing every day.</p>
+
+              <p>
+                Manage your skills and keep growing every day.
+              </p>
+
             </div>
 
-            <div className="profile-bubble">💜</div>
+            <div className="profile-bubble">
+              💜
+            </div>
+
           </div>
 
+          {/* PROFILE DETAILS */}
           <div className="profile-strip">
+
             <div>
-              <span className="profile-label">YOUR EMAIL</span>
+
+              <span className="profile-label">
+                YOUR EMAIL
+              </span>
+
               <strong>{user?.email}</strong>
+
             </div>
 
             <div>
-              <span className="profile-label">YOUR SKILLS</span>
+
+              <span className="profile-label">
+                YOUR SKILLS
+              </span>
+
               <strong>{skills.length} added</strong>
+
             </div>
+
           </div>
 
           <div className="dashboard-grid">
 
             {/* ADD SKILL FORM */}
             <div className="add-skill-card">
-              <span className="eyebrow">BUILD YOUR PROFILE</span>
-              <h2>Add a <span>Skill</span></h2>
+
+              <span className="eyebrow">
+                BUILD YOUR PROFILE
+              </span>
+
+              <h2>
+                Add a <span>Skill</span>
+              </h2>
 
               <p className="form-description">
                 Tell the community what you can teach or want to learn.
               </p>
 
               <form onSubmit={handleAddSkill}>
+
                 <label>Skill Name</label>
+
                 <input
                   type="text"
                   placeholder="Example: Java, Python, UI Design"
@@ -939,6 +1080,7 @@ await fetchExploreSkills();
                 />
 
                 <label>Skill Type</label>
+
                 <select
                   value={skillForm.skill_type}
                   onChange={(e) =>
@@ -948,11 +1090,18 @@ await fetchExploreSkills();
                     })
                   }
                 >
-                  <option value="Teach">I can Teach</option>
-                  <option value="Learn">I want to Learn</option>
+                  <option value="Teach">
+                    I can Teach
+                  </option>
+
+                  <option value="Learn">
+                    I want to Learn
+                  </option>
+
                 </select>
 
                 <label>Description</label>
+
                 <textarea
                   placeholder="Write a short description..."
                   rows="3"
@@ -966,8 +1115,10 @@ await fetchExploreSkills();
                 />
 
                 {skillForm.skill_type === "Teach" && (
+
                   <>
                     <label>Teaching Mode</label>
+
                     <select
                       value={skillForm.teaching_mode}
                       onChange={(e) =>
@@ -977,13 +1128,22 @@ await fetchExploreSkills();
                         })
                       }
                     >
-                      <option value="FREE">Free</option>
-                      <option value="EXCHANGE">Skill Exchange</option>
+
+                      <option value="FREE">
+                        Free
+                      </option>
+
+                      <option value="EXCHANGE">
+                        Skill Exchange
+                      </option>
+
                     </select>
                   </>
+
                 )}
 
                 <label>Skill Level</label>
+
                 <select
                   value={skillForm.skill_level}
                   onChange={(e) =>
@@ -993,9 +1153,19 @@ await fetchExploreSkills();
                     })
                   }
                 >
-                  <option value="BEGINNER">Beginner</option>
-                  <option value="INTERMEDIATE">Intermediate</option>
-                  <option value="ADVANCED">Advanced</option>
+
+                  <option value="BEGINNER">
+                    Beginner
+                  </option>
+
+                  <option value="INTERMEDIATE">
+                    Intermediate
+                  </option>
+
+                  <option value="ADVANCED">
+                    Advanced
+                  </option>
+
                 </select>
 
                 <button
@@ -1004,47 +1174,79 @@ await fetchExploreSkills();
                 >
                   + Add My Skill
                 </button>
+
               </form>
+
             </div>
 
             {/* MY SKILLS */}
             <div className="my-skills-section">
+
               <div className="my-skills-heading">
+
                 <div>
-                  <span className="eyebrow">YOUR COLLECTION</span>
-                  <h2>My <span>Skills</span></h2>
+
+                  <span className="eyebrow">
+                    YOUR COLLECTION
+                  </span>
+
+                  <h2>
+                    My <span>Skills</span>
+                  </h2>
+
                 </div>
 
-                <span className="skill-count">{skills.length}</span>
+                <span className="skill-count">
+                  {skills.length}
+                </span>
+
               </div>
 
               {message && (
-                <p className="error-message">{message}</p>
+                <p className="error-message">
+                  {message}
+                </p>
               )}
 
               {loading ? (
+
                 <p className="empty-state">
                   Loading your skills...
                 </p>
+
               ) : skills.length === 0 ? (
+
                 <div className="empty-state">
+
                   <div>🌱</div>
+
                   <h3>No skills added yet</h3>
-                  <p>Add your first skill using the form.</p>
+
+                  <p>
+                    Add your first skill using the form.
+                  </p>
+
                 </div>
+
               ) : (
+
                 <div className="my-skill-list">
+
                   {skills.map((skill) => (
+
                     <div
                       className="my-skill-card"
                       key={skill.userSkillId}
                     >
+
                       <div className="my-skill-icon">
                         {skill.skill_type === "Teach" ? "🎓" : "📚"}
                       </div>
 
                       <div className="my-skill-details">
+
                         <div className="skill-title-row">
+
                           <h3>{skill.skill_name}</h3>
 
                           <span
@@ -1056,6 +1258,7 @@ await fetchExploreSkills();
                           >
                             {skill.skill_type}
                           </span>
+
                         </div>
 
                         <p>
@@ -1063,12 +1266,19 @@ await fetchExploreSkills();
                         </p>
 
                         <div className="skill-meta">
-                          <span>{skill.skill_level}</span>
+
+                          <span>
+                            {skill.skill_level}
+                          </span>
 
                           {skill.skill_type === "Teach" && (
-                            <span>{skill.teaching_mode}</span>
+                            <span>
+                              {skill.teaching_mode}
+                            </span>
                           )}
+
                         </div>
+
                       </div>
 
                       <button
@@ -1080,11 +1290,17 @@ await fetchExploreSkills();
                       >
                         🗑️
                       </button>
+
                     </div>
+
                   ))}
+
                 </div>
+
               )}
+
             </div>
+
           </div>
 
           <button
@@ -1093,8 +1309,11 @@ await fetchExploreSkills();
           >
             ← Back to Home
           </button>
+
         </section>
+
       )}
+
     </div>
   );
 }
