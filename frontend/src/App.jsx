@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
-const API = "https://skillswap-1-dkc7.onrender.com";
+const API = "https://skillswap-51yh.onrender.com";
 
 function App() {
   const [page, setPage] = useState("home");
